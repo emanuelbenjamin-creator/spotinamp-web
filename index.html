@@ -1,0 +1,622 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spotinamp — tu Spotify con alma de Winamp</title>
+<meta name="description" content="Spotinamp es un reproductor para Windows con el aspecto del Winamp clásico que pone la música de tu cuenta de Spotify Premium.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='2' y='2' width='60' height='60' rx='12' fill='%231d2439'/%3E%3Cpath d='M38 6 14 36h15l-6 22 27-32H34l8-20z' fill='%23f6a01a'/%3E%3C/svg%3E">
+<style>
+  :root {
+    /* Spotify */
+    --verde: #1db954;
+    --verde-claro: #1ed760;
+    --negro: #121212;
+    --carbon: #191414;
+    /* Winamp */
+    --acero: #1d2439;
+    --acero-claro: #2a3050;
+    --borde-luz: #75749c;
+    --borde-sombra: #0b0e18;
+    --lcd: #00e200;
+    --rayo: #f6a01a;
+    --oro: #d6c56a;
+    /* Texto */
+    --texto: #f1f2f5;
+    --texto-suave: #b4b7c6;
+    --ancho: 1080px;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--negro);
+    color: var(--texto);
+    font: 16px/1.6 "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--verde-claro); }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--rayo); outline-offset: 3px; }
+  h1, h2, h3 { line-height: 1.2; margin: 0 0 .5em; text-wrap: balance; }
+  p { margin: 0 0 1em; }
+  .contenedor { width: min(var(--ancho), 100% - 32px); margin-inline: auto; }
+  .lcd { font-family: Consolas, "Cascadia Mono", "Courier New", monospace; color: var(--lcd); }
+
+  /* --- Cabecera y pestañas --- */
+  header {
+    position: sticky; top: 0; z-index: 10;
+    background: linear-gradient(var(--acero-claro), var(--acero));
+    border-bottom: 1px solid var(--borde-sombra);
+    box-shadow: inset 0 1px 0 var(--borde-luz);
+  }
+  .barra { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 10px 0; }
+  .marca { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: .12em; color: var(--texto); text-decoration: none; }
+  .marca svg { width: 30px; height: 30px; flex: none; }
+  .marca span span { color: var(--verde-claro); }
+  .pestanas { display: flex; gap: 4px; flex-wrap: wrap; margin-left: auto; }
+  .pestanas button {
+    font: inherit; font-size: 14px; color: var(--texto-suave); cursor: pointer;
+    background: var(--acero); padding: 7px 14px;
+    border: 1px solid; border-color: var(--borde-luz) var(--borde-sombra) var(--borde-sombra) var(--borde-luz);
+  }
+  .pestanas button:hover { color: var(--texto); }
+  .pestanas button[aria-selected="true"] {
+    color: var(--lcd); background: #0d111d;
+    border-color: var(--borde-sombra) var(--borde-luz) var(--borde-luz) var(--borde-sombra);
+  }
+
+  main > section[hidden] { display: none; }
+  .bloque { padding: 56px 0; }
+  .bloque + .bloque { border-top: 1px solid #232323; }
+  .antetitulo { font-size: 13px; letter-spacing: .18em; text-transform: uppercase; color: var(--rayo); margin-bottom: 10px; }
+  h1 { font-size: clamp(2rem, 5vw, 3.4rem); }
+  h2 { font-size: clamp(1.5rem, 3vw, 2.1rem); }
+  h3 { font-size: 1.1rem; }
+  .entrada { font-size: 1.15rem; color: var(--texto-suave); max-width: 62ch; }
+
+  /* --- Portada --- */
+  .portada {
+    background:
+      radial-gradient(900px 420px at 85% 0%, rgba(29,185,84,.22), transparent 70%),
+      radial-gradient(700px 380px at 0% 100%, rgba(246,160,26,.12), transparent 70%),
+      var(--carbon);
+  }
+  .portada .contenedor { display: grid; grid-template-columns: 1.1fr 1fr; gap: 40px; align-items: center; }
+  /* Sin esto, el contenido ancho de la maqueta ensancha la columna más que la pantalla. */
+  .portada .contenedor > *, .dos > *, .maqueta > * { min-width: 0; }
+  .portada h1 em { font-style: normal; color: var(--verde-claro); }
+  .acciones { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
+  .boton {
+    display: inline-block; font: inherit; font-weight: 700; text-decoration: none; cursor: pointer;
+    padding: 13px 26px; border-radius: 999px; border: 2px solid transparent;
+  }
+  .boton.principal { background: var(--verde); color: #000; }
+  .boton.principal:hover { background: var(--verde-claro); }
+  .boton.secundario { background: transparent; color: var(--texto); border-color: #535353; }
+  .boton.secundario:hover { border-color: var(--texto); }
+  .nota { font-size: 13px; color: var(--texto-suave); margin-top: 14px; }
+
+  /* Maqueta del reproductor, dibujada con CSS */
+  .maqueta { display: grid; grid-template-columns: 1fr .95fr; gap: 0; max-width: 520px; margin-inline: auto; filter: drop-shadow(0 18px 40px rgba(0,0,0,.6)); }
+  .ventana {
+    background: var(--acero);
+    border: 1px solid; border-color: var(--borde-luz) var(--borde-sombra) var(--borde-sombra) var(--borde-luz);
+    padding: 4px; font-size: 10px;
+  }
+  .ventana .titulo {
+    text-align: center; letter-spacing: .3em; font-weight: 700; font-size: 9px; color: #c7c8d6;
+    background: linear-gradient(90deg, transparent 0 8%, var(--oro) 8% 30%, transparent 30% 70%, var(--oro) 70% 92%, transparent 92%) center / 100% 3px no-repeat;
+    padding: 1px 0 3px;
+  }
+  .pantalla { background: #000; border: 1px solid; border-color: var(--borde-sombra) var(--borde-luz) var(--borde-luz) var(--borde-sombra); padding: 5px 6px; }
+  .tiempo { font-size: 22px; line-height: 1; }
+  .cancion { font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 4px; }
+  .barras { display: flex; align-items: flex-end; gap: 2px; height: 26px; margin-top: 6px; }
+  .barras i { flex: 1; background: linear-gradient(#ef3110, #d6ce18 35%, #18a408 70%); animation: sube 1.1s ease-in-out infinite alternate; }
+  .barras i:nth-child(3n) { animation-duration: .7s; }
+  .barras i:nth-child(4n+1) { animation-duration: 1.5s; }
+  .barras i:nth-child(5n+2) { animation-duration: .9s; }
+  @keyframes sube { from { height: 15%; } to { height: 100%; } }
+  .botonera { display: flex; gap: 3px; margin-top: 5px; }
+  .botonera b {
+    flex: 1; height: 14px; background: #c7c8d6; color: #1d2439; font-size: 8px; line-height: 12px; text-align: center;
+    border: 1px solid; border-color: #fff #555 #555 #fff;
+  }
+  .lista { height: 92px; overflow: hidden; font-size: 9px; line-height: 1.45; }
+  .lista div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .lista .actual { background: #0000c6; color: #fff; }
+  .ecualizador { display: flex; gap: 5px; align-items: center; height: 44px; padding: 0 4px; }
+  .ecualizador i { flex: 1; height: 100%; background: linear-gradient(#000 0 0) center / 2px 100% no-repeat; position: relative; }
+  .ecualizador i::after { content: ""; position: absolute; left: 50%; top: var(--y, 50%); width: 9px; height: 5px; margin-left: -4.5px; background: #c7c8d6; border: 1px solid #555; }
+  .sp .fila { display: flex; gap: 4px; margin: 3px 0; }
+  .sp .ficha { padding: 1px 6px; background: var(--acero-claro); border: 1px solid; border-color: var(--borde-luz) var(--borde-sombra) var(--borde-sombra) var(--borde-luz); color: #c7c8d6; font-size: 9px; }
+  .sp .ficha.activa { color: var(--lcd); background: #0d111d; }
+  .sp .ahora { display: flex; gap: 6px; align-items: center; margin-bottom: 4px; }
+  .sp .caratula { width: 30px; height: 30px; flex: none; background: linear-gradient(135deg, var(--verde), #0b5a28); }
+  @media (prefers-reduced-motion: reduce) { .barras i { animation: none; height: 60%; } html { scroll-behavior: auto; } }
+
+  /* --- Tarjetas --- */
+  .rejilla { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-top: 28px; }
+  .tarjeta { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 10px; padding: 20px; }
+  .tarjeta h3 { color: var(--texto); }
+  .tarjeta p { color: var(--texto-suave); margin: 0; font-size: 15px; }
+  .tarjeta .icono { font-size: 22px; margin-bottom: 10px; color: var(--verde-claro); }
+  .cifras { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-top: 24px; }
+  .cifra { background: #000; border: 1px solid; border-color: var(--borde-sombra) var(--borde-luz) var(--borde-luz) var(--borde-sombra); padding: 14px 16px; }
+  .cifra strong { display: block; font-size: 1.7rem; line-height: 1.1; }
+  .cifra span { font-size: 13px; color: var(--texto-suave); }
+
+  /* --- Listas, tablas, pasos --- */
+  .dos { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+  ul.limpia { list-style: none; padding: 0; margin: 0; }
+  ul.limpia li { padding: 9px 0 9px 28px; position: relative; border-bottom: 1px solid #232323; }
+  ul.limpia li::before { content: "▸"; position: absolute; left: 6px; color: var(--verde-claro); }
+  ul.limpia.avisos li::before { content: "!"; color: var(--rayo); font-weight: 700; }
+  ol.pasos { counter-reset: paso; list-style: none; padding: 0; margin: 20px 0 0; }
+  ol.pasos li { counter-increment: paso; position: relative; padding: 0 0 18px 52px; }
+  ol.pasos li::before {
+    content: counter(paso); position: absolute; left: 0; top: 0; width: 34px; height: 34px; border-radius: 50%;
+    background: var(--verde); color: #000; font-weight: 700; display: grid; place-items: center;
+  }
+  .tabla { overflow-x: auto; margin-top: 16px; }
+  table { border-collapse: collapse; width: 100%; font-size: 15px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #2a2a2a; vertical-align: top; }
+  th { color: var(--texto-suave); font-weight: 600; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; }
+  code, kbd { font-family: Consolas, "Cascadia Mono", monospace; font-size: .92em; background: #000; color: var(--lcd); padding: 1px 6px; border-radius: 4px; }
+  pre { background: #000; color: var(--lcd); padding: 16px; border-radius: 8px; overflow-x: auto; font: 14px/1.5 Consolas, "Cascadia Mono", monospace; border: 1px solid #2a2a2a; }
+  .caja-descarga { background: linear-gradient(135deg, #14301f, var(--carbon)); border: 1px solid #1f5c38; border-radius: 14px; padding: 28px; }
+
+  /* --- Diagrama de arquitectura --- */
+  .diagrama { display: grid; gap: 10px; margin-top: 20px; }
+  .capa { display: grid; grid-template-columns: 150px 1fr; gap: 12px; align-items: stretch; }
+  .capa > span { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--texto-suave); align-self: center; }
+  .nodos { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .nodo { background: var(--acero); border: 1px solid; border-color: var(--borde-luz) var(--borde-sombra) var(--borde-sombra) var(--borde-luz); padding: 10px 12px; font-size: 14px; }
+  .nodo b { display: block; color: var(--texto); }
+  .nodo small { color: var(--texto-suave); }
+  .nodo.sp { border-color: #1f5c38; background: #10241a; }
+  .flecha { text-align: center; color: var(--rayo); font-size: 18px; line-height: 1; margin-left: 162px; }
+
+  footer { border-top: 1px solid #232323; padding: 28px 0 40px; color: var(--texto-suave); font-size: 14px; }
+
+  @media (max-width: 820px) {
+    .portada .contenedor, .dos { grid-template-columns: 1fr; }
+    .pestanas { margin-left: 0; width: 100%; display: grid; grid-template-columns: repeat(2, 1fr); }
+    .pestanas button { padding-inline: 8px; }
+    .capa { grid-template-columns: 1fr; }
+    .flecha { margin-left: 0; }
+    .caja-descarga [style*="text-align:right"] { text-align: left !important; }
+    .bloque { padding: 40px 0; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="contenedor barra">
+    <a class="marca" href="#inicio" data-ir="inicio" aria-label="Spotinamp, inicio">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><rect x="2" y="2" width="60" height="60" rx="12" fill="#1d2439" stroke="#75749c"/><path d="M38 6 14 36h15l-6 22 27-32H34l8-20z" fill="#f6a01a"/></svg>
+      <span>SPOTI<span>NAMP</span></span>
+    </a>
+    <div class="pestanas" role="tablist" aria-label="Secciones">
+      <button role="tab" id="t-inicio" aria-controls="inicio" data-ir="inicio">Inicio</button>
+      <button role="tab" id="t-funciones" aria-controls="funciones" data-ir="funciones">Funciones</button>
+      <button role="tab" id="t-descargar" aria-controls="descargar" data-ir="descargar">Descargar</button>
+      <button role="tab" id="t-tecnico" aria-controls="tecnico" data-ir="tecnico">Cómo está hecho</button>
+    </div>
+  </div>
+</header>
+
+<main>
+
+<!-- ============================ INICIO ============================ -->
+<section id="inicio" role="tabpanel" aria-labelledby="t-inicio">
+  <div class="bloque portada">
+    <div class="contenedor">
+      <div>
+        <div class="antetitulo">Reproductor para Windows</div>
+        <h1>Tu Spotify, con alma de <em>Winamp</em>.</h1>
+        <p class="entrada">Spotinamp trae de vuelta las ventanitas, las skins y el visualizador de los años del MP3, y los conecta a tu biblioteca de Spotify Premium.</p>
+        <div class="acciones">
+          <a class="boton principal" data-descarga href="#descargar">Descargar para Windows</a>
+          <button class="boton secundario" data-ir="funciones">Ver qué hace</button>
+        </div>
+        <p class="nota">Gratis · Windows 10 y 11 · Requiere Spotify Premium</p>
+      </div>
+
+      <div class="maqueta" aria-hidden="true">
+        <div>
+          <div class="ventana">
+            <div class="titulo">SPOTINAMP</div>
+            <div class="pantalla">
+              <div class="lcd tiempo">02:48</div>
+              <div class="lcd cancion">9. Juan Luis Guerra 4.40 - Bachata Rosa</div>
+              <div class="barras"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            </div>
+            <div class="botonera"><b>|◂</b><b>▸</b><b>||</b><b>■</b><b>▸|</b></div>
+          </div>
+          <div class="ventana">
+            <div class="titulo">EQUALIZER</div>
+            <div class="pantalla ecualizador"><i style="--y:30%"></i><i style="--y:42%"></i><i style="--y:55%"></i><i style="--y:48%"></i><i style="--y:36%"></i><i style="--y:50%"></i><i style="--y:62%"></i><i style="--y:44%"></i><i style="--y:38%"></i><i style="--y:52%"></i></div>
+          </div>
+          <div class="ventana">
+            <div class="titulo">PLAYLIST</div>
+            <div class="pantalla lista lcd">
+              <div>6. Hillsong UNITED - Oceans</div>
+              <div>7. Bryan Adams - Heaven</div>
+              <div>8. Keane - Everybody's Changing</div>
+              <div class="actual">9. Juan Luis Guerra 4.40 - Bachata Rosa</div>
+              <div>10. Avicii - Wake Me Up</div>
+              <div>11. Coldplay - See You Soon</div>
+            </div>
+          </div>
+        </div>
+        <div class="ventana sp">
+          <div class="titulo">SPOTIFY</div>
+          <div class="ahora">
+            <div class="caratula"></div>
+            <div><div class="lcd">Bachata Rosa</div><div style="color:#c7c8d6">Juan Luis Guerra 4.40</div></div>
+          </div>
+          <div class="fila"><span class="ficha activa">Buscar</span><span class="ficha">Biblioteca</span><span class="ficha">Cola</span></div>
+          <div class="pantalla lista lcd" style="height:196px">
+            <div>Canciones que te gustan</div>
+            <div>Escuchadas recientemente</div>
+            <div>Mis listas »</div>
+            <div>Mis álbumes »</div>
+            <div class="actual">[Álbum] Bachata Rosa</div>
+            <div>[Artista] Juan Luis Guerra »</div>
+          </div>
+          <div class="fila" style="justify-content:flex-end"><span class="ficha">Añadir</span><span class="ficha">Reproducir</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bloque">
+    <div class="contenedor">
+      <div class="antetitulo">Por qué gusta</div>
+      <h2>Lo mejor de dos épocas</h2>
+      <div class="rejilla">
+        <div class="tarjeta"><div class="icono">◧</div><h3>Ventanas de verdad</h3><p>Principal, ecualizador, lista y visualizador sueltos sobre tu Escritorio. Se arrastran, se imantan entre sí y recuerdan dónde los dejaste.</p></div>
+        <div class="tarjeta"><div class="icono">♫</div><h3>Toda tu música de Spotify</h3><p>Busca canciones, artistas y álbumes; abre tus listas, tus me gusta y lo que escuchaste hace poco, sin salir del reproductor.</p></div>
+        <div class="tarjeta"><div class="icono">◉</div><h3>Visualizador que sigue el ritmo</h3><p>Las barras y MilkDrop se mueven con el sonido real que sale de tu equipo, con cerca de 100 diseños que van rotando.</p></div>
+        <div class="tarjeta"><div class="icono">◈</div><h3>Skins clásicas</h3><p>Carga las skins <code>.wsz</code> de toda la vida desde el menú o arrastrando el archivo a la ventana.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bloque">
+    <div class="contenedor dos">
+      <div>
+        <div class="antetitulo">Antes de instalar</div>
+        <h2>Lo que conviene saber</h2>
+        <p class="entrada">Preferimos decirlo claro desde el principio.</p>
+      </div>
+      <ul class="limpia avisos">
+        <li><strong>Necesita Spotify Premium.</strong> Spotify solo permite reproducir fuera de sus apps a cuentas de pago; con una gratuita no suena.</li>
+        <li><strong>El ecualizador es decorativo.</strong> El sonido de Spotify está protegido y no se puede modificar.</li>
+        <li><strong>Acceso por invitación o con tu propio registro.</strong> Spotify limita cada registro de desarrollador a 5 cuentas. En <a href="#descargar" data-ir="descargar">Descargar</a> explicamos las dos formas de entrar.</li>
+        <li><strong>Solo Windows</strong>, y las ventanas viven en la pantalla principal.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ FUNCIONES ============================ -->
+<section id="funciones" role="tabpanel" aria-labelledby="t-funciones" hidden>
+  <div class="bloque">
+    <div class="contenedor">
+      <div class="antetitulo">Funciones</div>
+      <h1>Todo lo que hace</h1>
+      <p class="entrada">Un reproductor pequeño con las comodidades que uno espera hoy.</p>
+
+      <div class="rejilla">
+        <div class="tarjeta"><h3>Reproducción</h3><p>Play, pausa, stop, anterior y siguiente, barra de avance, volumen con la rueda del ratón, aleatorio y repetir.</p></div>
+        <div class="tarjeta"><h3>Biblioteca de Spotify</h3><p>Búsqueda de canciones, artistas y álbumes. Canciones que te gustan, escuchadas recientemente, tus listas y tus álbumes guardados.</p></div>
+        <div class="tarjeta"><h3>Cola y "saltar a"</h3><p>Pulsa <kbd>J</kbd> y escribe para saltar a cualquier canción de la cola, como en el Winamp original.</p></div>
+        <div class="tarjeta"><h3>Crear playlists</h3><p>Marca las canciones que quieras de la cola, ponles nombre y se guardan como playlist privada en tu cuenta.</p></div>
+        <div class="tarjeta"><h3>Carátula y me gusta</h3><p>Portada, título y artista de lo que suena, con un botón para guardar la canción en tus favoritas.</p></div>
+        <div class="tarjeta"><h3>MilkDrop</h3><p>El visualizador psicodélico, en ventana, a pantalla completa o como fondo del Escritorio.</p></div>
+        <div class="tarjeta"><h3>Tamaño doble</h3><p><kbd>Ctrl</kbd>+<kbd>D</kbd> duplica la interfaz para pantallas de alta resolución.</p></div>
+        <div class="tarjeta"><h3>Siempre visible</h3><p>Mantén el reproductor encima de las demás ventanas mientras trabajas.</p></div>
+        <div class="tarjeta"><h3>Bandeja y avisos</h3><p>Icono junto al reloj para controlar la música, y un aviso discreto al cambiar de canción.</p></div>
+        <div class="tarjeta"><h3>Teclas multimedia</h3><p>Las teclas de reproducir, pausa y siguiente del teclado funcionan aunque estés en otra aplicación.</p></div>
+        <div class="tarjeta"><h3>Memoria</h3><p>Al cerrar recuerda la cola, la canción, el volumen, las ventanas abiertas y su posición.</p></div>
+        <div class="tarjeta"><h3>Sesión guardada</h3><p>Inicias sesión en Spotify una vez; las siguientes veces abre directo en el reproductor.</p></div>
+      </div>
+
+      <h2 style="margin-top:56px">Frente a la app oficial</h2>
+      <div class="tabla">
+        <table>
+          <thead><tr><th>&nbsp;</th><th>Spotinamp</th><th>App de Spotify</th></tr></thead>
+          <tbody>
+            <tr><td>Tamaño en pantalla</td><td>Ventanas pequeñas que puedes repartir o plegar</td><td>Una ventana grande</td></tr>
+            <tr><td>Aspecto</td><td>Winamp clásico, con skins intercambiables</td><td>Fijo</td></tr>
+            <tr><td>Visualizador</td><td>Barras y MilkDrop</td><td>No tiene</td></tr>
+            <tr><td>Descubrimiento, podcasts, letras</td><td>No</td><td>Sí</td></tr>
+            <tr><td>Ecualizador que cambia el sonido</td><td>No (decorativo)</td><td>Sí</td></tr>
+            <tr><td>Descargas sin conexión</td><td>No</td><td>Sí</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="nota">Spotinamp no reemplaza a la app oficial: es otra forma de escuchar lo que ya tienes en ella.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ DESCARGAR ============================ -->
+<section id="descargar" role="tabpanel" aria-labelledby="t-descargar" hidden>
+  <div class="bloque">
+    <div class="contenedor">
+      <div class="antetitulo">Descargar</div>
+      <h1>Instálalo en un minuto</h1>
+
+      <div class="caja-descarga">
+        <div class="dos" style="align-items:center">
+          <div>
+            <h2 style="margin-bottom:.3em">Spotinamp para Windows</h2>
+            <p style="color:var(--texto-suave);margin:0">Archivo .zip de menos de 1 MB · Windows 10 y 11 · Sin instalador</p>
+          </div>
+          <div style="text-align:right">
+            <a class="boton principal" data-descarga href="#">Descargar .zip</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="dos" style="margin-top:40px">
+        <div>
+          <h2>Pasos</h2>
+          <ol class="pasos">
+            <li><strong>Descomprime la carpeta entera</strong> donde quieras, por ejemplo en Documentos. No lo abras desde dentro del .zip.</li>
+            <li><strong>Abre <code>Winamp.exe</code>.</strong> La primera vez Windows puede avisar de que no reconoce el programa: pulsa «Más información» y «Ejecutar de todas formas».</li>
+            <li><strong>Pulsa «Conectar con Spotify»</strong> e inicia sesión con tu cuenta Premium.</li>
+            <li><strong>Dale play.</strong> Las siguientes veces abre directamente en el reproductor.</li>
+          </ol>
+        </div>
+        <div>
+          <h2>Requisitos</h2>
+          <ul class="limpia">
+            <li>Windows 10 u 11</li>
+            <li>Cuenta de Spotify Premium</li>
+            <li>Conexión a internet</li>
+            <li>Nada más: usa componentes que Windows ya trae</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bloque">
+    <div class="contenedor">
+      <h2>Si Spotify no te deja entrar</h2>
+      <p class="entrada">Spotify limita cada registro de desarrollador a cinco cuentas. Hay dos formas de usar Spotinamp:</p>
+      <div class="rejilla">
+        <div class="tarjeta">
+          <h3>Con invitación</h3>
+          <p>Quien te pasó el programa puede añadir el correo de tu cuenta de Spotify a su lista de autorizados. No tienes que hacer nada más.</p>
+        </div>
+        <div class="tarjeta">
+          <h3>Con tu propio registro</h3>
+          <p>Registra una app gratuita en el panel de desarrolladores de Spotify, copia su <em>Client ID</em> y pégalo con el botón «Usar mi propio Client ID» de la pantalla de inicio.</p>
+        </div>
+      </div>
+
+      <h3 style="margin-top:36px">Cómo registrar tu app en Spotify</h3>
+      <ol class="pasos">
+        <li>Entra en <code>developer.spotify.com/dashboard</code> con tu cuenta Premium y pulsa <strong>Create app</strong>.</li>
+        <li>En <strong>Redirect URIs</strong> escribe exactamente <code>http://127.0.0.1:5173/callback</code>.</li>
+        <li>Marca <strong>Web API</strong> y <strong>Web Playback SDK</strong> y guarda.</li>
+        <li>En <strong>Settings</strong> copia el <strong>Client ID</strong> y pégalo en Spotinamp.</li>
+      </ol>
+
+      <h2 style="margin-top:40px">Preguntas frecuentes</h2>
+      <div class="rejilla">
+        <div class="tarjeta"><h3>¿Es seguro?</h3><p>Tu contraseña la escribes en la página de Spotify, no en el programa. La sesión se guarda solo en tu equipo.</p></div>
+        <div class="tarjeta"><h3>¿Graba lo que suena?</h3><p>No. Para mover el visualizador analiza el sonido que sale por los altavoces y lo descarta al instante.</p></div>
+        <div class="tarjeta"><h3>¿Cuánta memoria usa?</h3><p>Alrededor de 830 MB en nuestra medición, la mayor parte del motor web de Windows que necesita Spotify.</p></div>
+        <div class="tarjeta"><h3>¿Cómo se desinstala?</h3><p>Borra la carpeta. Los ajustes quedan en <code>%LOCALAPPDATA%\WinampSpotify</code>, que también puedes borrar.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ TÉCNICO ============================ -->
+<section id="tecnico" role="tabpanel" aria-labelledby="t-tecnico" hidden>
+  <div class="bloque">
+    <div class="contenedor">
+      <div class="antetitulo">Para equipos y desarrolladores</div>
+      <h1>Cómo está hecho Spotinamp</h1>
+      <p class="entrada">Un caso práctico de cómo construir un cliente de escritorio sobre las APIs públicas de Spotify: qué piezas usa, qué decisiones se tomaron y qué límites impone la plataforma.</p>
+
+      <div class="cifras">
+        <div class="cifra"><strong class="lcd">&lt; 1 MB</strong><span>paquete descargable</span></div>
+        <div class="cifra"><strong class="lcd">38 KB</strong><span>ejecutable nativo</span></div>
+        <div class="cifra"><strong class="lcd">45–70 ms</strong><span>retraso del visualizador</span></div>
+        <div class="cifra"><strong class="lcd">0</strong><span>instaladores o dependencias extra</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bloque">
+    <div class="contenedor">
+      <h2>Arquitectura</h2>
+      <p class="entrada">Una página web hace de interfaz y un programa nativo mínimo la aloja, le da ventana y le presta lo que el navegador no puede hacer.</p>
+
+      <div class="diagrama">
+        <div class="capa">
+          <span>Interfaz</span>
+          <div class="nodos">
+            <div class="nodo"><b>Webamp</b><small>Réplica de Winamp 2 en HTML: ventanas, skins, MilkDrop</small></div>
+            <div class="nodo"><b>Ventana SPOTIFY</b><small>Búsqueda, biblioteca, cola y opciones</small></div>
+          </div>
+        </div>
+        <div class="flecha">▼</div>
+        <div class="capa">
+          <span>Adaptadores</span>
+          <div class="nodos">
+            <div class="nodo"><b>Motor de audio</b><small>Traduce play, pausa y avance de Webamp a órdenes de Spotify</small></div>
+            <div class="nodo"><b>Fuente del visualizador</b><small>Nivel automático y realce por bandas de la señal captada</small></div>
+            <div class="nodo"><b>Sesión</b><small>OAuth con PKCE, sin secreto de cliente</small></div>
+          </div>
+        </div>
+        <div class="flecha">▼</div>
+        <div class="capa">
+          <span>Spotify</span>
+          <div class="nodos">
+            <div class="nodo sp"><b>Web Playback SDK</b><small>Reproduce el audio protegido dentro del motor web</small></div>
+            <div class="nodo sp"><b>Web API</b><small>Biblioteca, búsqueda, playlists y control de reproducción</small></div>
+          </div>
+        </div>
+        <div class="flecha">▲▼</div>
+        <div class="capa">
+          <span>Programa nativo</span>
+          <div class="nodos">
+            <div class="nodo"><b>WebView2</b><small>Motor web de Windows, con soporte de contenido protegido</small></div>
+            <div class="nodo"><b>Servidor local</b><small>Entrega la página en 127.0.0.1</small></div>
+            <div class="nodo"><b>Recorte de ventana</b><small>La ventana cubre la pantalla y se recorta a cada pieza</small></div>
+            <div class="nodo"><b>Captura de audio</b><small>Salida del equipo en modo loopback, solo para dibujar</small></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bloque">
+    <div class="contenedor">
+      <h2>Decisiones de diseño</h2>
+      <div class="tabla">
+        <table>
+          <thead><tr><th>Problema</th><th>Solución elegida</th><th>Por qué</th></tr></thead>
+          <tbody>
+            <tr><td>Reproducir música de Spotify fuera de su app</td><td>Web Playback SDK dentro de un motor web</td><td>Es la única vía que Spotify ofrece a terceros; exige un navegador con gestión de derechos</td></tr>
+            <tr><td>Interfaz idéntica a Winamp</td><td>Webamp con un motor de audio propio</td><td>Permite sustituir su reproductor interno y conservar ventanas, skins y visualizador</td></tr>
+            <tr><td>Programa de escritorio ligero</td><td>C# con WebView2, compilado con las herramientas de Windows</td><td>No requiere instalar ningún entorno; alternativas como Tauri o Electron añaden gigas de herramientas o no traen gestión de derechos</td></tr>
+            <tr><td>Ventanas independientes sin multiplicar memoria</td><td>Una sola ventana a pantalla completa, recortada a rectángulos</td><td>Un único motor web; donde no hay pieza, el programa no existe y el Escritorio sigue utilizable</td></tr>
+            <tr><td>Visualizador coherente con la música</td><td>Captura de la salida de audio del sistema</td><td>El audio de Spotify no es accesible desde la página; la mezcla del sistema sí</td></tr>
+            <tr><td>Inicio de sesión sin servidor propio</td><td>OAuth con PKCE y redirección a 127.0.0.1</td><td>No hay secreto que proteger ni infraestructura que mantener</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="bloque">
+    <div class="contenedor dos">
+      <div>
+        <h2>Lo que la plataforma permite</h2>
+        <ul class="limpia">
+          <li>Reproducir cualquier pista para cuentas Premium</li>
+          <li>Leer la biblioteca del usuario: favoritos, álbumes, listas propias</li>
+          <li>Buscar en el catálogo</li>
+          <li>Crear y modificar playlists del usuario</li>
+          <li>Aparecer como dispositivo en Spotify Connect</li>
+        </ul>
+      </div>
+      <div>
+        <h2>Y lo que no</h2>
+        <ul class="limpia avisos">
+          <li><strong>Acceder al audio.</strong> Sin ecualizador real, ni fundidos, ni análisis directo.</li>
+          <li><strong>Más de 5 usuarios por registro</strong> en modo desarrollo. El acceso ampliado se reserva a organizaciones.</li>
+          <li><strong>Cuentas gratuitas.</strong> La reproducción externa exige Premium.</li>
+          <li><strong>Leer listas ajenas</strong> y varias funciones de catálogo, retiradas para apps nuevas en 2026.</li>
+          <li><strong>Uso comercial</strong> de la reproducción en streaming.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="bloque">
+    <div class="contenedor">
+      <h2>Si vas a construir algo parecido</h2>
+      <div class="rejilla">
+        <div class="tarjeta"><h3>Empieza por los límites</h3><p>Lee las condiciones de la plataforma antes de diseñar. Aquí definieron el producto: sin ecualizador, con tope de usuarios y solo Premium.</p></div>
+        <div class="tarjeta"><h3>Prueba el riesgo primero</h3><p>La duda era si el motor web de Windows aceptaría el audio protegido. Se comprobó con un prototipo en minutos antes de invertir en lo demás.</p></div>
+        <div class="tarjeta"><h3>Reutiliza piezas maduras</h3><p>La interfaz y el visualizador son proyectos de código abierto existentes; el trabajo propio está en conectarlos.</p></div>
+        <div class="tarjeta"><h3>Mide, no supongas</h3><p>El visualizador mejoró al medir la señal real: llegaba baja, suavizada y a ráfagas. Tres causas, tres arreglos.</p></div>
+        <div class="tarjeta"><h3>Cuida la marca ajena</h3><p>Usa nombre e iconos propios y declara que no hay afiliación. El aspecto retro es un homenaje, no una suplantación.</p></div>
+        <div class="tarjeta"><h3>Diseña para que cada quien traiga su acceso</h3><p>Permitir un <em>Client ID</em> propio convierte un tope de 5 usuarios en un producto que cualquiera puede usar.</p></div>
+      </div>
+
+      <h2 style="margin-top:56px">Tecnologías</h2>
+      <div class="tabla">
+        <table>
+          <thead><tr><th>Capa</th><th>Tecnología</th></tr></thead>
+          <tbody>
+            <tr><td>Interfaz</td><td>TypeScript, Vite, Webamp, Butterchurn (MilkDrop)</td></tr>
+            <tr><td>Música</td><td>Spotify Web Playback SDK y Web API</td></tr>
+            <tr><td>Programa de Windows</td><td>C#, WinForms, Microsoft WebView2</td></tr>
+            <tr><td>Audio para el visualizador</td><td>WASAPI en modo loopback, Web Audio</td></tr>
+            <tr><td>Sesión</td><td>OAuth 2.0 con PKCE</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="margin-top:36px">Compilar desde el código</h3>
+<pre>npm install
+npm run build
+powershell -ExecutionPolicy Bypass -File native\obtener-webview2.ps1
+native\compilar.cmd</pre>
+      <p class="nota">Código fuente: <a data-repo href="#">repositorio en GitHub</a>.</p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="contenedor">
+    <p><strong>Spotinamp</strong> es un proyecto personal sin fines comerciales. No está afiliado, patrocinado ni respaldado por Spotify AB ni por los titulares de Winamp. Spotify y Winamp son marcas de sus respectivos propietarios.</p>
+    <p>Interfaz basada en <a href="https://webamp.org" rel="noopener">Webamp</a> (MIT).</p>
+  </div>
+</footer>
+
+<script>
+  // Enlaces que dependen de dónde se publique el proyecto.
+  const ENLACE_DESCARGA = "https://github.com/emanuelbenjamin-creator/Spotinamp/releases/latest/download/Winamp-Spotify.zip";
+  const ENLACE_REPOSITORIO = "https://github.com/emanuelbenjamin-creator/Spotinamp";
+
+  const pestanas = [...document.querySelectorAll('[role="tab"]')];
+  const paneles = [...document.querySelectorAll('[role="tabpanel"]')];
+
+  function mostrar(id, mover) {
+    if (!paneles.some((panel) => panel.id === id)) id = "inicio";
+    for (const panel of paneles) panel.hidden = panel.id !== id;
+    for (const pestana of pestanas) {
+      const activa = pestana.dataset.ir === id;
+      pestana.setAttribute("aria-selected", activa);
+      pestana.tabIndex = activa ? 0 : -1;
+    }
+    if (location.hash.slice(1) !== id) history.replaceState(null, "", "#" + id);
+    if (mover) window.scrollTo({ top: 0 });
+  }
+
+  document.addEventListener("click", (event) => {
+    const origen = event.target.closest("[data-ir]");
+    if (!origen) return;
+    event.preventDefault();
+    mostrar(origen.dataset.ir, true);
+  });
+
+  // Flechas izquierda/derecha entre pestañas.
+  document.querySelector('[role="tablist"]').addEventListener("keydown", (event) => {
+    const paso = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+    if (!paso) return;
+    const actual = pestanas.findIndex((pestana) => pestana.getAttribute("aria-selected") === "true");
+    const siguiente = pestanas[(actual + paso + pestanas.length) % pestanas.length];
+    mostrar(siguiente.dataset.ir, false);
+    siguiente.focus();
+  });
+
+  for (const enlace of document.querySelectorAll("[data-descarga]")) {
+    // En la portada el botón lleva a la pestaña con los pasos; allí descarga.
+    if (enlace.closest("#descargar")) enlace.href = ENLACE_DESCARGA;
+    else enlace.dataset.ir = "descargar";
+  }
+  for (const enlace of document.querySelectorAll("[data-repo]")) enlace.href = ENLACE_REPOSITORIO;
+
+  window.addEventListener("hashchange", () => mostrar(location.hash.slice(1), true));
+  mostrar(location.hash.slice(1) || "inicio", false);
+</script>
+</body>
+</html>
