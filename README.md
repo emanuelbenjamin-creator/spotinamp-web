@@ -11,7 +11,6 @@ Para verla en local:
 python -m http.server 8766
 ```
 
-Los enlaces de descarga y del repositorio están al principio del `<script>` de `index.html`
-(`ENLACE_DESCARGA` y `ENLACE_REPOSITORIO`).
+El enlace de descarga está al principio del `<script>` de `index.html` (`ENLACE_DESCARGA`).
 
 Spotinamp no está afiliado a Spotify ni a Winamp.

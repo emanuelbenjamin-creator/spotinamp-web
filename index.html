@@ -297,7 +297,6 @@
         <li><strong>Necesita Spotify Premium.</strong> Spotify solo permite reproducir fuera de sus apps a cuentas de pago; con una gratuita no suena.</li>
         <li><strong>El ecualizador es decorativo.</strong> El sonido de Spotify está protegido y no se puede modificar.</li>
         <li><strong>Acceso por invitación o con tu propio registro.</strong> Spotify limita cada registro de desarrollador a 5 cuentas. En <a href="#descargar" data-ir="descargar">Descargar</a> explicamos las dos formas de entrar.</li>
-        <li><strong>Solo Windows</strong>, y las ventanas viven en la pantalla principal.</li>
       </ul>
     </div>
   </div>
@@ -415,7 +414,6 @@
         <div class="tarjeta"><h3>¿Es seguro?</h3><p>Tu contraseña la escribes en la página de Spotify, no en el programa. La sesión se guarda solo en tu equipo.</p></div>
         <div class="tarjeta"><h3>¿Graba lo que suena?</h3><p>No. Para mover el visualizador analiza el sonido que sale por los altavoces y lo descarta al instante.</p></div>
         <div class="tarjeta"><h3>¿Cuánta memoria usa?</h3><p>Alrededor de 830 MB en nuestra medición, la mayor parte del motor web de Windows que necesita Spotify.</p></div>
-        <div class="tarjeta"><h3>¿Cómo se desinstala?</h3><p>Borra la carpeta. Los ajustes quedan en <code>%LOCALAPPDATA%\WinampSpotify</code>, que también puedes borrar.</p></div>
       </div>
     </div>
   </div>
@@ -528,17 +526,7 @@
 
   <div class="bloque">
     <div class="contenedor">
-      <h2>Si vas a construir algo parecido</h2>
-      <div class="rejilla">
-        <div class="tarjeta"><h3>Empieza por los límites</h3><p>Lee las condiciones de la plataforma antes de diseñar. Aquí definieron el producto: sin ecualizador, con tope de usuarios y solo Premium.</p></div>
-        <div class="tarjeta"><h3>Prueba el riesgo primero</h3><p>La duda era si el motor web de Windows aceptaría el audio protegido. Se comprobó con un prototipo en minutos antes de invertir en lo demás.</p></div>
-        <div class="tarjeta"><h3>Reutiliza piezas maduras</h3><p>La interfaz y el visualizador son proyectos de código abierto existentes; el trabajo propio está en conectarlos.</p></div>
-        <div class="tarjeta"><h3>Mide, no supongas</h3><p>El visualizador mejoró al medir la señal real: llegaba baja, suavizada y a ráfagas. Tres causas, tres arreglos.</p></div>
-        <div class="tarjeta"><h3>Cuida la marca ajena</h3><p>Usa nombre e iconos propios y declara que no hay afiliación. El aspecto retro es un homenaje, no una suplantación.</p></div>
-        <div class="tarjeta"><h3>Diseña para que cada quien traiga su acceso</h3><p>Permitir un <em>Client ID</em> propio convierte un tope de 5 usuarios en un producto que cualquiera puede usar.</p></div>
-      </div>
-
-      <h2 style="margin-top:56px">Tecnologías</h2>
+      <h2>Tecnologías</h2>
       <div class="tabla">
         <table>
           <thead><tr><th>Capa</th><th>Tecnología</th></tr></thead>
@@ -551,13 +539,6 @@
           </tbody>
         </table>
       </div>
-
-      <h3 style="margin-top:36px">Compilar desde el código</h3>
-<pre>npm install
-npm run build
-powershell -ExecutionPolicy Bypass -File native\obtener-webview2.ps1
-native\compilar.cmd</pre>
-      <p class="nota">Código fuente: <a data-repo href="#">repositorio en GitHub</a>.</p>
     </div>
   </div>
 </section>
@@ -567,14 +548,12 @@ native\compilar.cmd</pre>
 <footer>
   <div class="contenedor">
     <p><strong>Spotinamp</strong> es un proyecto personal sin fines comerciales. No está afiliado, patrocinado ni respaldado por Spotify AB ni por los titulares de Winamp. Spotify y Winamp son marcas de sus respectivos propietarios.</p>
-    <p>Interfaz basada en <a href="https://webamp.org" rel="noopener">Webamp</a> (MIT).</p>
   </div>
 </footer>
 
 <script>
   // Enlaces que dependen de dónde se publique el proyecto.
   const ENLACE_DESCARGA = "https://github.com/emanuelbenjamin-creator/Spotinamp/releases/latest/download/Winamp-Spotify.zip";
-  const ENLACE_REPOSITORIO = "https://github.com/emanuelbenjamin-creator/Spotinamp";
 
   const pestanas = [...document.querySelectorAll('[role="tab"]')];
   const paneles = [...document.querySelectorAll('[role="tabpanel"]')];
@@ -613,7 +592,6 @@ native\compilar.cmd</pre>
     if (enlace.closest("#descargar")) enlace.href = ENLACE_DESCARGA;
     else enlace.dataset.ir = "descargar";
   }
-  for (const enlace of document.querySelectorAll("[data-repo]")) enlace.href = ENLACE_REPOSITORIO;
 
   window.addEventListener("hashchange", () => mostrar(location.hash.slice(1), true));
   mostrar(location.hash.slice(1) || "inicio", false);
